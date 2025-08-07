@@ -1,0 +1,8 @@
+- name: Install Prometheus and Grafana on Kubernetes
+  hosts: localhost
+  tasks:
+    - name: Apply Prometheus
+      shell: kubectl apply -f ../monitoring/prometheus-deployment.yaml
+
+    - name: Apply Grafana
+      shell: kubectl apply -f ../monitoring/grafana-deployment.yaml

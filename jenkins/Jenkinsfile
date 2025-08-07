@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/runalp97/3stagedev-proauto.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t flaskapp:latest ./app'
+            }
+        }
+
+        stage('Deploy to Dev') {
+            steps {
+                sh 'kubectl apply -f k8s/dev/'
+            }
+        }
+
+        stage('Approval for Test') {
+            steps {
+                input "Deploy to Test?"
+            }
+        }
+
+        stage('Deploy to Test') {
+            steps {
+                sh 'kubectl apply -f k8s/test/'
+            }
+        }
+
+        stage('Approval for Prod') {
+            steps {
+                input "Deploy to Prod?"
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                sh 'kubectl apply -f k8s/prod/'
+            }
+        }
+    }
+}

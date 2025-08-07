@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app-test
+  labels:
+    app: flask-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-test
+  template:
+    metadata:
+      labels:
+        app: flask-test
+    spec:
+      containers:
+        - name: flask-container
+          image: flaskapp:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
