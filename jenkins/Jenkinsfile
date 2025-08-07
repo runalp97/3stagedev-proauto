@@ -4,13 +4,19 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                 git branch: 'main', url: 'https://github.com/runalp97/3stagedev-proauto.git'
+                git branch: 'main', url: 'https://github.com/runalp97/3stagedev-proauto.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t flaskapp:latest ./app'
+            }
+        }
+
+        stage('Load to KinD') {
+            steps {
+                sh 'kind load docker-image flaskapp:latest --name devpro-cluster'
             }
         }
 
