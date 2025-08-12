@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-service-prod
+  name: flask-pod-service
 spec:
   selector:
     app: flask-prod
