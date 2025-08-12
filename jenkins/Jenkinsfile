@@ -16,7 +16,7 @@ pipeline {
 
         stage('Load to KinD') {
             steps {
-                sh 'kind load docker-image flaskapp:latest --name devpro-cluster'
+                sh 'kind load docker-image flaskapp:latest --name devpro-auto'
             }
         }
 
