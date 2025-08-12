@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-pod-service
+  name: flask-prod-service
 spec:
   selector:
     app: flask-prod
@@ -9,4 +9,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 5000
+      nodePort: 30082
   type: NodePort
