@@ -1,13 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-prod-service
+  name: flask-dev-service
+  labels:
+    app: flask-dev
 spec:
   selector:
-    app: flask-prod
+    app: flask-dev
   ports:
     - protocol: TCP
-      port: 80
+      port: 5000
       targetPort: 5000
-      nodePort: 30082
-  type: NodePort
+  type: ClusterIP

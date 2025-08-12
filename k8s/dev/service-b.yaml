@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-dev-browser
+  labels:
+    app: flask-dev
+spec:
+  selector:
+    app: flask-dev
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30081
+  type: NodePort

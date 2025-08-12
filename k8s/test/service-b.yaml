@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-test-browser
+  labels:
+    app: flask-test
+spec:
+  selector:
+    app: flask-test
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30080
+  type: NodePort

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-prod-service
+  labels:
+    app: flask-prod
+spec:
+  selector:
+    app: flask-prod
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
