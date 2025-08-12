@@ -20,6 +20,9 @@ spec:
           imagePullPolicy: Never
           ports:
             - containerPort: 5000
+          env:
+            - name: APP_ENV
+              value: "Dev"
           resources:
             requests:
               cpu: "100m"
