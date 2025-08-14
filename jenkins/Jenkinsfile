@@ -65,13 +65,13 @@ pipeline {
             """
         }
     }
-}
+    }
 
        stage('Approval for Prod') {
     steps {
         input "Deploy to Prod?"
     }
-}
+       }
 
 stage('Deploy to Prod') {
     steps {
@@ -98,7 +98,6 @@ stage('Install/Update Monitoring') {
     }
 }
 
-
     post {
         always {
             input message: "Do you want to cleanup all namespaces?", ok: "Yes, cleanup"
@@ -109,4 +108,4 @@ stage('Install/Update Monitoring') {
             '''
         }
     }
-}
+    }
