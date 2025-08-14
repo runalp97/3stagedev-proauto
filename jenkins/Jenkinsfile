@@ -48,55 +48,54 @@ pipeline {
             }
         }
 
-    stage('Run Tests in Test Environment') {
-    steps {
-        script {
-            // Wait for the test deployment to be ready
-            sh """
-                echo "Waiting for test deployment to be ready..."
-                kubectl rollout status deployment/flask-app-test -n test --timeout=60s
-            """
+        stage('Run Tests in Test Environment') {
+            steps {
+                script {
+                    sh """
+                    echo "Waiting for test deployment to be ready..."
+                    kubectl rollout status deployment/flask-app-test -n test --timeout=60s
+                    """
 
-            // Run test using an ephemeral curl pod inside the cluster
-            sh """
-                echo "Running test inside cluster..."
-                kubectl run curl-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
-                  curl -s http://flask-test-browser.test.svc.cluster.local | grep -q "Hello" && echo "Test passed!" || (echo "Test failed!" && exit 1)
-            """
+                    sh """
+                    echo "Running test inside cluster..."
+                    kubectl run curl-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
+                      curl -s http://flask-test-browser.test.svc.cluster.local | grep -q "Hello" && echo "Test passed!" || (echo "Test failed!" && exit 1)
+                    """
+                }
+            }
         }
-    }
-    }
 
-       stage('Approval for Prod') {
-    steps {
-        input "Deploy to Prod?"
-    }
-       }
-
-stage('Deploy to Prod') {
-    steps {
-        sh 'kubectl apply -n prod -f k8s/prod/'
-        sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
-        sh 'kubectl rollout status deployment/flask-app-prod -n prod --timeout=60s'
-    }
-}
-
-stage('Test Prod Deployment') {
-    steps {
-        script {
-            sh """
-            kubectl run curl-prod-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
-              curl -s http://flask-prod-browser.prod.svc.cluster.local | grep -q "Hello" && echo "Prod Test Passed!" || (echo "Prod Test Failed!" && exit 1)
-            """
+        stage('Approval for Prod') {
+            steps {
+                input "Deploy to Prod?"
+            }
         }
-    }
-}
 
-stage('Install/Update Monitoring') {
-    steps {
-        sh 'ansible-playbook ansible/install_monitoring.yml'
-    }
-}
+        stage('Deploy to Prod') {
+            steps {
+                sh 'kubectl apply -n prod -f k8s/prod/'
+                sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
+                sh 'kubectl rollout status deployment/flask-app-prod -n prod --timeout=60s'
+            }
+        }
+
+        stage('Test Prod Deployment') {
+            steps {
+                script {
+                    sh """
+                    kubectl run curl-prod-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
+                      curl -s http://flask-prod-browser.prod.svc.cluster.local | grep -q "Hello" && echo "Prod Test Passed!" || (echo "Prod Test Failed!" && exit 1)
+                    """
+                }
+            }
+        }
+
+        stage('Install/Update Monitoring') {
+            steps {
+                sh 'ansible-playbook ansible/install_monitoring.yml'
+            }
+        }
+    } // <-- this closes stages block
 
     post {
         always {
@@ -108,4 +107,4 @@ stage('Install/Update Monitoring') {
             '''
         }
     }
-    }
+}
