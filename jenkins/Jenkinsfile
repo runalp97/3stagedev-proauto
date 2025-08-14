@@ -20,19 +20,9 @@ pipeline {
             }
         }
 
-        stage('Create Namespaces') {
-            steps {
-                sh '''
-                kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
-                kubectl create namespace test --dry-run=client -o yaml | kubectl apply -f -
-                kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
-                '''
-            }
-        }
-
         stage('Deploy to Dev') {
             steps {
-                sh 'kubectl apply -n dev -f k8s/dev/'
+                sh 'kubectl apply -n default -f k8s/dev/'
             }
         }
 
@@ -44,7 +34,7 @@ pipeline {
 
         stage('Deploy to Test') {
             steps {
-                sh 'kubectl apply -n test -f k8s/test/'
+                sh 'kubectl apply -n default -f k8s/test/'
             }
         }
 
@@ -53,13 +43,13 @@ pipeline {
                 script {
                     sh """
                     echo "Waiting for test deployment to be ready..."
-                    kubectl rollout status deployment/flask-app-test -n test --timeout=60s
+                    kubectl rollout status deployment/flask-app-test -n default --timeout=60s
                     """
 
                     sh """
                     echo "Running test inside cluster..."
                     kubectl run curl-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
-                      curl -s http://flask-test-browser.test.svc.cluster.local | grep -q "Hello" && echo "Test passed!" || (echo "Test failed!" && exit 1)
+                      curl -s http://flask-test-browser.default.svc.cluster.local | grep -q "Hello" && echo "Test passed!" || (echo "Test failed!" && exit 1)
                     """
                 }
             }
@@ -73,9 +63,9 @@ pipeline {
 
         stage('Deploy to Prod') {
             steps {
-                sh 'kubectl apply -n prod -f k8s/prod/'
-                sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
-                sh 'kubectl rollout status deployment/flask-app-prod -n prod --timeout=60s'
+                sh 'kubectl apply -n default -f k8s/prod/'
+                sh 'kubectl apply -n default -f k8s/prod/hpa.yaml'
+                sh 'kubectl rollout status deployment/flask-app-prod -n default --timeout=60s'
             }
         }
 
@@ -84,7 +74,7 @@ pipeline {
                 script {
                     sh """
                     kubectl run curl-prod-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
-                      curl -s http://flask-prod-browser.prod.svc.cluster.local | grep -q "Hello" && echo "Prod Test Passed!" || (echo "Prod Test Failed!" && exit 1)
+                      curl -s http://flask-prod-browser.default.svc.cluster.local | grep -q "Hello" && echo "Prod Test Passed!" || (echo "Prod Test Failed!" && exit 1)
                     """
                 }
             }
@@ -95,15 +85,24 @@ pipeline {
                 sh 'ansible-playbook ansible/install_monitoring.yml'
             }
         }
-    } // <-- this closes stages block
+    }
 
     post {
         always {
-            input message: "Do you want to cleanup all namespaces?", ok: "Yes, cleanup"
+            input message: "Do you want to cleanup everything?", ok: "Yes, cleanup"
             sh '''
-            kubectl delete namespace dev --ignore-not-found
-            kubectl delete namespace test --ignore-not-found
-            kubectl delete namespace prod --ignore-not-found
+            # Delete Dev/Test/Prod deployments and services
+            kubectl delete -f k8s/dev/ -n default --ignore-not-found
+            kubectl delete -f k8s/test/ -n default --ignore-not-found
+            kubectl delete -f k8s/prod/ -n default --ignore-not-found
+
+            # Delete Prometheus
+            kubectl delete deployment prometheus --ignore-not-found -n default
+            kubectl delete service prometheus --ignore-not-found -n default
+
+            # Delete Grafana
+            kubectl delete deployment grafana --ignore-not-found -n default
+            kubectl delete service grafana --ignore-not-found -n default
             '''
         }
     }
