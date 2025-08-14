@@ -48,15 +48,24 @@ pipeline {
             }
         }
 
-        stage('Run Tests in Test Environment') {
-            steps {
-                script {
-                    def testPort = sh(script: "kubectl get svc flask-test-browser -n test -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
-                    def kindIP = sh(script: "kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'", returnStdout: true).trim()
-                    sh "curl -s http://${kindIP}:${testPort} | grep -i 'Hello' || (echo 'Test failed!' && exit 1)"
-                }
-            }
+       stage('Run Tests in Test Environment') {
+    steps {
+        script {
+            // Start port-forwarding in background
+            sh "kubectl port-forward svc/flask-test-browser -n test 30080:80 &"
+            
+            // Give port-forward some time to establish
+            sh "sleep 5"
+            
+            // Run curl test to see if HTML contains expected text
+            sh "curl -s http://localhost:30080 | grep -i 'Hello' || (echo 'Test failed!' && exit 1)"
+            
+            // Kill background port-forward process after test
+            sh "pkill -f 'kubectl port-forward svc/flask-test-browser'"
         }
+    }
+}
+
 
         stage('Approval for Prod') {
             steps {
