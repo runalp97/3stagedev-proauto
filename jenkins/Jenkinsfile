@@ -67,19 +67,37 @@ pipeline {
     }
 }
 
-        stage('Approval for Prod') {
-            steps {
-                input "Deploy to Prod?"
-            }
-        }
+       stage('Approval for Prod') {
+    steps {
+        input "Deploy to Prod?"
+    }
+}
 
-        stage('Deploy to Prod') {
-            steps {
-                sh 'kubectl apply -n prod -f k8s/prod/'
-                sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
-            }
+stage('Deploy to Prod') {
+    steps {
+        sh 'kubectl apply -n prod -f k8s/prod/'
+        sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
+        sh 'kubectl rollout status deployment/flask-app-prod -n prod --timeout=60s'
+    }
+}
+
+stage('Test Prod Deployment') {
+    steps {
+        script {
+            sh """
+            kubectl run curl-prod-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
+              curl -s http://flask-prod-browser.prod.svc.cluster.local | grep -q "Hello" && echo "Prod Test Passed!" || (echo "Prod Test Failed!" && exit 1)
+            """
         }
     }
+}
+
+stage('Install/Update Monitoring') {
+    steps {
+        sh 'ansible-playbook ansible/install_monitoring.yml'
+    }
+}
+
 
     post {
         always {
