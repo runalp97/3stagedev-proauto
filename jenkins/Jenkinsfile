@@ -48,21 +48,35 @@ pipeline {
             }
         }
 
-      stage('Run Tests in Test Environment') {
+     stage('Run Tests in Test Environment') {
     steps {
         script {
             // Start port-forward in background
-            sh """
-            nohup kubectl port-forward svc/flask-test-browser -n test 30080:80 > pf.log 2>&1 &
-            PF_PID=\$!
-            sleep 10
-            curl -s http://localhost:30080 | grep -i 'Hello' || (echo 'Test failed!' && kill \$PF_PID && exit 1)
-            kill \$PF_PID
-            """
+            sh '''
+                nohup kubectl port-forward svc/flask-test-browser -n test 30080:80 > pf.log 2>&1 &
+                PF_PID=$!
+                
+                # Wait until the service responds (max 30s)
+                for i in {1..30}; do
+                    if curl -s http://localhost:30080 | grep -q 'Hello'; then
+                        echo "Test passed!"
+                        break
+                    fi
+                    sleep 1
+                done
+                
+                # Check if last iteration failed
+                if ! curl -s http://localhost:30080 | grep -q 'Hello'; then
+                    echo "Test failed!"
+                    exit 1
+                fi
+                
+                # Kill the port-forward process
+                kill $PF_PID
+            '''
         }
     }
 }
-
 
         stage('Approval for Prod') {
             steps {
