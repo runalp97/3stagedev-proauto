@@ -51,12 +51,8 @@ pipeline {
         stage('Run Tests in Test Environment') {
             steps {
                 script {
-                    // Get the NodePort for Test service
                     def testPort = sh(script: "kubectl get svc flask-service-test -n test -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
-                    // Get KinD host IP
                     def kindIP = sh(script: "kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'", returnStdout: true).trim()
-
-                    // Run curl test to see if HTML contains expected text
                     sh "curl -s http://${kindIP}:${testPort} | grep -i 'Hello' || (echo 'Test failed!' && exit 1)"
                 }
             }
@@ -73,6 +69,17 @@ pipeline {
                 sh 'kubectl apply -n prod -f k8s/prod/'
                 sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
             }
+        }
+    }
+
+    post {
+        always {
+            input message: "Do you want to cleanup all namespaces?", ok: "Yes, cleanup"
+            sh '''
+            kubectl delete namespace dev --ignore-not-found
+            kubectl delete namespace test --ignore-not-found
+            kubectl delete namespace prod --ignore-not-found
+            '''
         }
     }
 }
