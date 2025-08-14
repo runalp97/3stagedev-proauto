@@ -13,15 +13,20 @@ data:
       - job_name: 'flask-dev'
         static_configs:
           - targets: ['flask-dev-service:5000']
+            labels:
+              job: flask-dev
 
       - job_name: 'flask-test'
         static_configs:
           - targets: ['flask-test-service:5000']
+            labels:
+              job: flask-test
 
       - job_name: 'flask-prod'
         static_configs:
           - targets: ['flask-prod-service:5000']
-
+            labels:
+              job: flask-prod
 ---
 apiVersion: apps/v1
 kind: Deployment
