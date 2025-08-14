@@ -20,9 +20,19 @@ pipeline {
             }
         }
 
+        stage('Create Namespaces') {
+            steps {
+                sh '''
+                kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+                kubectl create namespace test --dry-run=client -o yaml | kubectl apply -f -
+                kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+                '''
+            }
+        }
+
         stage('Deploy to Dev') {
             steps {
-                sh 'kubectl apply -f k8s/dev/'
+                sh 'kubectl apply -n dev -f k8s/dev/'
             }
         }
 
@@ -34,7 +44,21 @@ pipeline {
 
         stage('Deploy to Test') {
             steps {
-                sh 'kubectl apply -f k8s/test/'
+                sh 'kubectl apply -n test -f k8s/test/'
+            }
+        }
+
+        stage('Run Tests in Test Environment') {
+            steps {
+                script {
+                    // Get the NodePort for Test service
+                    def testPort = sh(script: "kubectl get svc flask-service-test -n test -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
+                    // Get KinD host IP
+                    def kindIP = sh(script: "kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'", returnStdout: true).trim()
+
+                    // Run curl test to see if HTML contains expected text
+                    sh "curl -s http://${kindIP}:${testPort} | grep -i 'Hello' || (echo 'Test failed!' && exit 1)"
+                }
             }
         }
 
@@ -46,7 +70,8 @@ pipeline {
 
         stage('Deploy to Prod') {
             steps {
-                sh 'kubectl apply -f k8s/prod/'
+                sh 'kubectl apply -n prod -f k8s/prod/'
+                sh 'kubectl apply -n prod -f k8s/prod/hpa.yaml'
             }
         }
     }
