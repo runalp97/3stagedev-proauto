@@ -48,32 +48,21 @@ pipeline {
             }
         }
 
-     stage('Run Tests in Test Environment') {
+    stage('Run Tests in Test Environment') {
     steps {
         script {
-            // Start port-forward in background
-            sh '''
-                nohup kubectl port-forward svc/flask-test-browser -n test 30080:80 > pf.log 2>&1 &
-                PF_PID=$!
-                
-                # Wait until the service responds (max 30s)
-                for i in {1..30}; do
-                    if curl -s http://localhost:30080 | grep -q 'Hello'; then
-                        echo "Test passed!"
-                        break
-                    fi
-                    sleep 1
-                done
-                
-                # Check if last iteration failed
-                if ! curl -s http://localhost:30080 | grep -q 'Hello'; then
-                    echo "Test failed!"
-                    exit 1
-                fi
-                
-                # Kill the port-forward process
-                kill $PF_PID
-            '''
+            // Wait for the test deployment to be ready
+            sh """
+                echo "Waiting for test deployment to be ready..."
+                kubectl rollout status deployment/flask-app-test -n test --timeout=60s
+            """
+
+            // Run test using an ephemeral curl pod inside the cluster
+            sh """
+                echo "Running test inside cluster..."
+                kubectl run curl-test --rm -i --tty --image=curlimages/curl --restart=Never -- \
+                  curl -s http://flask-test-browser.test.svc.cluster.local | grep -q "Hello" && echo "Test passed!" || (echo "Test failed!" && exit 1)
+            """
         }
     }
 }
